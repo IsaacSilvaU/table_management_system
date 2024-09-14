@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException
+# main.py
+from fastapi import FastAPI, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from database import SessionLocal, engine
 from models import Mesa, Producto, Pedido
@@ -8,7 +9,10 @@ from pydantic import BaseModel
 
 class EstadoMesa(BaseModel):
     estado: bool
-    
+
+class IncrementoHorasRequest(BaseModel):
+    incremento_horas: int
+
 # Iniciar la aplicación FastAPI
 app = FastAPI()
 
@@ -45,6 +49,13 @@ def obtener_mesas(skip: int = 0, limit: int = 10, db: Session = Depends(get_db))
     mesas = db.query(Mesa).offset(skip).limit(limit).all()
     return mesas
 
+@app.get("/mesas/{mesa_id}")
+def obtener_mesa(mesa_id: int, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id == mesa_id).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+    return mesa
+
 @app.put("/mesas/{mesa_id}")
 def actualizar_mesa(
     mesa_id: int, 
@@ -66,6 +77,31 @@ def actualizar_mesa(
     db.refresh(mesa)
     return mesa
 
+@app.get("/mesas/precios/")
+def obtener_precios_mesas(db: Session = Depends(get_db)):
+    # Obtener todos los tipos y precios
+    precios_mesas = db.query(Mesa.tipo, Mesa.precio).all()
+
+    # Crear un diccionario para almacenar los precios únicos por tipo
+    precios_unicos = {}
+    for mesa in precios_mesas:
+        if mesa.tipo not in precios_unicos:
+            precios_unicos[mesa.tipo] = mesa.precio
+
+    # Convertir el diccionario a una lista de diccionarios
+    return [{"tipo": tipo, "precio": precio} for tipo, precio in precios_unicos.items()]
+
+@app.put("/mesas/precio/{tipo}")
+def actualizar_precio_mesa(tipo: int, nuevo_precio: float = Query(...), db: Session = Depends(get_db)):
+    mesas = db.query(Mesa).filter(Mesa.tipo == tipo).all()
+    if not mesas:
+        raise HTTPException(status_code=404, detail="Tipo de mesa no encontrado")
+    
+    for mesa in mesas:
+        mesa.precio = nuevo_precio
+
+    db.commit()
+    return {"mensaje": "Precio actualizado exitosamente"}
 
 @app.delete("/mesas/{mesa_id}")
 def eliminar_mesa(mesa_id: int, db: Session = Depends(get_db)):
@@ -76,6 +112,20 @@ def eliminar_mesa(mesa_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {"mensaje": "Mesa eliminada exitosamente"}
 
+@app.put("/mesas/{mesa_id}/tiempo_alquiler")
+def actualizar_tiempo_alquiler(mesa_id: int, request: IncrementoHorasRequest, db: Session = Depends(get_db)):
+    mesa = db.query(Mesa).filter(Mesa.id == mesa_id).first()
+    if not mesa:
+        raise HTTPException(status_code=404, detail="Mesa no encontrada")
+
+    mesa.tiempo_alquiler += request.incremento_horas
+    if mesa.tiempo_alquiler < 0:
+        mesa.tiempo_alquiler = 0
+
+    db.commit()
+    db.refresh(mesa)
+    return {"mensaje": "Tiempo de alquiler actualizado exitosamente", "nuevo_tiempo_alquiler": mesa.tiempo_alquiler}
+
 # Endpoints para CRUD de Productos
 @app.post("/productos/")
 def agregar_producto(nombre: str, precio: float, db: Session = Depends(get_db)):
@@ -84,6 +134,13 @@ def agregar_producto(nombre: str, precio: float, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(nuevo_producto)
     return nuevo_producto
+
+@app.get("/productos/{producto_id}")
+def obtener_producto(producto_id: int, db: Session = Depends(get_db)):
+    producto = db.query(Producto).filter(Producto.id == producto_id).first()
+    if not producto:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    return producto
 
 @app.get("/productos/")
 def obtener_productos(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):

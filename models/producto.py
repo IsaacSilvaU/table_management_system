@@ -1,3 +1,4 @@
+# producto.py
 from sqlalchemy import Column, Integer, String, Float
 from sqlalchemy.orm import relationship
 from .base_class import Base

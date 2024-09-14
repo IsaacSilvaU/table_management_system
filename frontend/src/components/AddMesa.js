@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import Button from './ui/Button';
+import Input from './ui/Input';
 
 const AddMesa = () => {
     const [nombre, setNombre] = useState('');
@@ -17,24 +19,32 @@ const AddMesa = () => {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <div>
-                <label>Nombre de la Mesa:</label>
-                <input
+        <form onSubmit={handleSubmit} className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6">Agregar Mesa</h2>
+            <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">Nombre de la Mesa:</label>
+                <Input
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     required
                 />
             </div>
-            <div>
-                <label>Tipo de Mesa:</label>
-                <select value={tipo} onChange={(e) => setTipo(e.target.value)}>
+            <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">Tipo de Mesa:</label>
+                <select
+                    value={tipo}
+                    onChange={(e) => setTipo(e.target.value)}
+                    className="block w-full p-2 border rounded"
+                >
                     <option value={1}>Pool</option>
                     <option value={2}>Común</option>
+                    <option value={3}>Extra</option>
                 </select>
             </div>
-            <button type="submit">Agregar Mesa</button>
+            <Button type="submit" variant="outline">
+                Agregar Mesa
+            </Button>
         </form>
     );
 };

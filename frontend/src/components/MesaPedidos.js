@@ -1,90 +1,69 @@
-import React, { useEffect, useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const MesaPedidos = () => {
     const { mesaId } = useParams();
+    const navigate = useNavigate();
     const [pedidos, setPedidos] = useState([]);
     const [total, setTotal] = useState(0);
-    const navigate = useNavigate();
 
     useEffect(() => {
-        fetchPedidos();
-    }, [mesaId]);
-
-    const fetchPedidos = () => {
         axios.get(`http://localhost:8000/mesas/${mesaId}/pedidos/`)
             .then(response => {
                 setPedidos(response.data);
-                const totalSum = response.data.reduce((sum, pedido) => sum + pedido.total, 0);
-                setTotal(totalSum);
+                setTotal(response.data.reduce((sum, pedido) => sum + pedido.total, 0));
             })
             .catch(error => console.error('Error fetching pedidos:', error));
-    };
+    }, [mesaId]);
 
     const handleDelete = async (pedidoId) => {
-        const confirmDelete = window.confirm(
-            "¿Está seguro de que desea eliminar este pedido? Esta acción no se puede deshacer."
-        );
-
-        if (confirmDelete) {
-            try {
-                await axios.delete(`http://localhost:8000/pedidos/${pedidoId}`);
-                fetchPedidos(); // Refresca la lista de pedidos después de eliminar uno
-                alert("Pedido eliminado exitosamente.");
-            } catch (error) {
-                console.error('Error deleting pedido:', error);
-                alert("Hubo un error al eliminar el pedido.");
-            }
+        try {
+            await axios.delete(`http://localhost:8000/pedidos/${pedidoId}`);
+            setPedidos(pedidos.filter(pedido => pedido.id !== pedidoId));
+            setTotal(total - pedidos.find(pedido => pedido.id === pedidoId).total);
+        } catch (error) {
+            console.error('Error deleting pedido:', error);
         }
     };
 
     const handleLiberarMesa = async () => {
-        const confirmLiberar = window.confirm(
-            "¿Está seguro de que desea liberar esta mesa? Esto eliminará todos los pedidos actuales."
-        );
-
-        if (confirmLiberar) {
-            try {
-                await axios.delete(`http://localhost:8000/mesas/${mesaId}/pedidos`); // Endpoint para eliminar todos los pedidos
-                await axios.put(`http://localhost:8000/mesas/${mesaId}/estado`, { estado: false }); // Liberar la mesa
-                navigate('/mesas'); // Volver a la lista de mesas
-            } catch (error) {
-                console.error('Error liberando la mesa:', error);
-            }
+        try {
+            await axios.delete(`http://localhost:8000/mesas/${mesaId}/pedidos/`);
+            await axios.put(`http://localhost:8000/mesas/${mesaId}/estado`, { estado: false });
+            navigate('/mesas');
+        } catch (error) {
+            console.error('Error liberando la mesa:', error);
         }
     };
 
     return (
-        <div>
-            <h2>Pedidos de la Mesa {mesaId}</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Producto ID</th>
-                        <th>Cantidad</th>
-                        <th>Total</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {pedidos.map(pedido => (
-                        <tr key={pedido.id}>
-                            <td>{pedido.producto_id}</td>
-                            <td>{pedido.cantidad}</td>
-                            <td>${pedido.total.toFixed(2)}</td>
-                            <td>
-                                <button onClick={() => handleDelete(pedido.id)}>Eliminar</button>
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
-            <h3>Total: ${total.toFixed(2)}</h3>
-            <button onClick={handleLiberarMesa}>Liberar Mesa</button>
+        <div className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6">Pedidos de Mesa {mesaId}</h2>
+            <ul className="mb-4">
+                {pedidos.map(pedido => (
+                    <li key={pedido.id} className="flex justify-between items-center mb-2">
+                        <span>{pedido.producto_id} - Cantidad: {pedido.cantidad}</span>
+                        <span>${pedido.total.toFixed(2)}</span>
+                        <button
+                            onClick={() => handleDelete(pedido.id)}
+                            className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded"
+                        >
+                            Eliminar
+                        </button>
+                    </li>
+                ))}
+            </ul>
+            <p className="text-xl font-bold mb-6">Total: ${total.toFixed(2)}</p>
+            <button
+                onClick={handleLiberarMesa}
+                className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded"
+            >
+                Liberar Mesa
+            </button>
         </div>
     );
 };
 
 export default MesaPedidos;
-

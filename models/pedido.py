@@ -1,3 +1,4 @@
+# pedido.py
 from sqlalchemy import Column, Integer, ForeignKey, Float
 from sqlalchemy.orm import relationship
 from .base_class import Base

@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import Button from './ui/Button';
+import Input from './ui/Input';
 
 const AddProducto = () => {
     const [nombre, setNombre] = useState('');
@@ -17,26 +19,29 @@ const AddProducto = () => {
     };
 
     return (
-        <form onSubmit={handleSubmit}>
-            <div>
-                <label>Nombre del Producto:</label>
-                <input
+        <form onSubmit={handleSubmit} className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">
+            <h2 className="text-2xl font-bold mb-6">Agregar Producto</h2>
+            <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">Nombre del Producto:</label>
+                <Input
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
                     required
                 />
             </div>
-            <div>
-                <label>Precio:</label>
-                <input
+            <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-bold mb-2">Precio:</label>
+                <Input
                     type="number"
                     value={precio}
                     onChange={(e) => setPrecio(e.target.value)}
                     required
                 />
             </div>
-            <button type="submit">Agregar Producto</button>
+            <Button type="submit" variant="outline">
+                Agregar Producto
+            </Button>
         </form>
     );
 };
