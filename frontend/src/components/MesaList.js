@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from './ui/Button';
 import Input from './ui/Input';
 
 const MesaList = () => {
     const [mesas, setMesas] = useState([]);
     const [newTableName, setNewTableName] = useState("");
-    const [newTableType, setNewTableType] = useState(1); // 1: Pool, 2: Común
+    const [newTableType, setNewTableType] = useState(1); // 1: Pool, 2: Común, 3: Extra
+    const [reportDate, setReportDate] = useState('');
 
     const navigate = useNavigate();
 
@@ -17,8 +18,9 @@ const MesaList = () => {
                 const mesasData = response.data.map(mesa => ({
                     ...mesa,
                     tipo: parseInt(mesa.tipo),
-                    estado: mesa.estado === "true",
-                    total: mesa.total + (mesa.tiempo_alquiler * mesa.precio),  // Sumamos el tiempo de alquiler al total
+                    // Usar el estado tal cual si ya es booleano
+                    estado: mesa.estado,
+                    total: (mesa.total ?? 0) + (mesa.tiempo_alquiler * mesa.precio),
                 }));
 
                 // Ordenar las mesas alfabéticamente
@@ -42,8 +44,9 @@ const MesaList = () => {
 
     const ocuparMesa = async (mesaId) => {
         try {
-            await axios.put(`http://localhost:8000/mesas/${mesaId}/estado`, { estado: true });
-            const mesaActualizada = mesas.find(mesa => mesa.id === mesaId);
+            // Ahora hacemos la solicitud a la ruta correcta y enviamos los datos en el cuerpo
+            const data = { estado: true };
+            await axios.put(`http://localhost:8000/mesas/${mesaId}`, data);
             handleIncrementHours(mesaId, 1);  // Incrementar una hora al ocupar la mesa
             setMesas(mesas.map(mesa => 
                 mesa.id === mesaId ? { ...mesa, estado: true } : mesa
@@ -54,6 +57,13 @@ const MesaList = () => {
     };
 
     const handleTableRemove = async (mesaId) => {
+        // Verificar si la mesa está ocupada
+        const mesa = mesas.find(m => m.id === mesaId);
+        if (mesa && mesa.estado) {
+            alert("No puedes eliminar una mesa que está ocupada.");
+            return;
+        }
+
         try {
             await axios.delete(`http://localhost:8000/mesas/${mesaId}`);
             setMesas(mesas.filter(mesa => mesa.id !== mesaId));
@@ -63,14 +73,17 @@ const MesaList = () => {
     };
 
     const handleNewTableAdd = async (e) => {
-        e.preventDefault(); // Prevenir el comportamiento predeterminado del formulario
+        e.preventDefault();
         if (newTableName.trim() !== "") {
             try {
-                const params = new URLSearchParams({ nombre: newTableName, tipo: parseInt(newTableType) });
-                const response = await axios.post(`http://localhost:8000/mesas/?${params.toString()}`);
+                const data = {
+                    nombre: newTableName,
+                    tipo: parseInt(newTableType)
+                };
+                const response = await axios.post('http://localhost:8000/mesas/', data);
                 setMesas([...mesas, response.data]);
                 setNewTableName("");
-                setNewTableType(1); // Resetear el tipo de mesa al valor predeterminado
+                setNewTableType(1);
             } catch (error) {
                 console.error('Error adding new table:', error);
             }
@@ -79,15 +92,33 @@ const MesaList = () => {
 
     const handleIncrementHours = async (mesaId, incremento) => {
         try {
-            const response = await axios.put(`http://localhost:8000/mesas/${mesaId}/tiempo_alquiler`, {
-                incremento_horas: incremento // Asegúrate de enviar un objeto con este campo
-            });
+            const mesa = mesas.find(m => m.id === mesaId);
+            const nuevoTiempoAlquiler = mesa.tiempo_alquiler + incremento;
+    
+            // Asegurarse de que el tiempo de alquiler no sea negativo
+            if (nuevoTiempoAlquiler < 0) {
+                alert("El tiempo de alquiler no puede ser negativo.");
+                return;
+            }
+    
+            // Determinar el nuevo estado de la mesa
+            const nuevoEstado = nuevoTiempoAlquiler > 0;
+    
+            // Enviar los datos al backend
+            const data = {
+                tiempo_alquiler: incremento,
+                estado: nuevoEstado
+            };
+            const response = await axios.put(`http://localhost:8000/mesas/${mesaId}`, data);
+    
+            // Actualizar el estado local de las mesas
             setMesas(mesas.map(mesa => 
                 mesa.id === mesaId 
                     ? { 
                         ...mesa, 
-                        tiempo_alquiler: response.data.nuevo_tiempo_alquiler,
-                        total: response.data.nuevo_tiempo_alquiler * mesa.precio + mesa.total - (mesa.tiempo_alquiler * mesa.precio)
+                        tiempo_alquiler: response.data.tiempo_alquiler,
+                        estado: response.data.estado,
+                        total: response.data.tiempo_alquiler * mesa.precio + mesa.total - (mesa.tiempo_alquiler * mesa.precio)
                     } 
                     : mesa
             ));
@@ -95,9 +126,37 @@ const MesaList = () => {
             console.error('Error incrementing hours:', error);
         }
     };
+    
+
+    // Descargar el reporte (sin cambios)
+    const handleDownloadReport = () => {
+        let date = reportDate;
+        if (!date) {
+            date = new Date().toISOString().split('T')[0];
+        }
+        const url = `http://localhost:8000/pedidos/descargar?fecha=${date}`;
+        window.open(url, '_blank');
+    };
+
+    // Eliminar todos los pedidos (sin cambios)
+    const handleDeleteAllOrders = async () => {
+        if (window.confirm('¿Estás seguro de que deseas eliminar todos los pedidos? Esta acción no se puede deshacer.')) {
+            try {
+                const response = await axios.delete('http://localhost:8000/pedidos/');
+                alert(response.data.mensaje);
+
+                // Actualizar el estado de las mesas
+                const updatedMesas = mesas.map(mesa => ({ ...mesa, estado: false, tiempo_alquiler: 0, total: 0 }));
+                setMesas(updatedMesas);
+            } catch (error) {
+                console.error('Error deleting all orders:', error);
+                alert('Ocurrió un error al eliminar los pedidos.');
+            }
+        }
+    };
 
     return (
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col">
             <header className="bg-primary text-primary-foreground py-4 px-6">
                 <h1 className="text-2xl font-bold">Gestión de Mesas</h1>
             </header>
@@ -145,12 +204,17 @@ const MesaList = () => {
                             <Button variant="outline" onClick={() => navigate(`/mesas/${mesa.id}/pedidos`)} className="flex-grow w-full">
                                 Ver Pedidos
                             </Button>
-                            <Button variant="outline" onClick={() => handleTableRemove(mesa.id)} className="flex-grow w-full">
+                            <Button
+                                variant="outline"
+                                onClick={() => handleTableRemove(mesa.id)}
+                                className="flex-grow w-full"
+                            >
                                 Eliminar Mesa
                             </Button>
                         </div>
                     </div>
                 ))}
+                {/* Formulario para agregar una nueva mesa */}
                 <div className="bg-white text-black rounded-lg p-4 flex flex-col items-center justify-center shadow-lg">
                     <form onSubmit={handleNewTableAdd}>
                         <Input
@@ -174,10 +238,25 @@ const MesaList = () => {
                         </Button>
                     </form>
                 </div>
+                {/* Contenedor para la gestión de pedidos */}
+                <div className="bg-white text-black rounded-lg p-4 flex flex-col items-center justify-center shadow-lg">
+                    <h2 className="text-lg font-bold mb-4">Gestión de Pedidos</h2>
+                    <Input
+                        type="date"
+                        value={reportDate}
+                        onChange={(e) => setReportDate(e.target.value)}
+                        className="mb-4"
+                    />
+                    <Button onClick={handleDownloadReport} className="mb-2 w-full">
+                        Descargar Reporte
+                    </Button>
+                    <Button variant="destructive" onClick={handleDeleteAllOrders} className="w-full">
+                        Eliminar Todos los Pedidos
+                    </Button>
+                </div>
             </main>
         </div>
     );
 };
 
 export default MesaList;
-

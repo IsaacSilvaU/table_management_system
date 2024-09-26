@@ -29,7 +29,7 @@ const PedidoList = () => {
 
         // Obtener la información de la mesa para el tiempo de alquiler
         axios.get(`http://localhost:8000/mesas/${mesaId}`)
-            .then(response => setMesa(response.data))
+            .then(response => setMesa(response.data))  // Obtener los datos de la mesa, incluyendo el nombre
             .catch(error => console.error('Error fetching mesa data:', error));
     }, [mesaId]);
 
@@ -52,18 +52,9 @@ const PedidoList = () => {
 
     const handleLiberarMesa = async () => {
         try {
-            // Eliminar los pedidos de la mesa
-            await axios.delete(`http://localhost:8000/mesas/${mesaId}/pedidos`);
-            
-            // Actualizar el tiempo de alquiler a 0
-            await axios.put(`http://localhost:8000/mesas/${mesaId}/tiempo_alquiler`, {
-                incremento_horas: -mesa.tiempo_alquiler  // Restar todas las horas
-            });
-            
-            // Cambiar el estado de la mesa a libre
-            await axios.put(`http://localhost:8000/mesas/${mesaId}/estado`, { estado: false });
-            
-            alert("Todos los pedidos han sido eliminados, el tiempo de alquiler se ha restablecido y la mesa ha sido liberada.");
+            // Llamar al nuevo endpoint para pagar los pedidos y liberar la mesa
+            await axios.put(`http://localhost:8000/mesas/${mesaId}/pedidos/pagar`);
+            alert("La mesa ha sido liberada y los pedidos han sido marcados como pagados.");
             navigate("/mesas");
         } catch (error) {
             console.error('Error liberando la mesa:', error);
@@ -76,7 +67,7 @@ const PedidoList = () => {
 
     return (
         <div className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">
-            <h2 className="text-2xl font-bold mb-6">Pedidos de la Mesa {mesaId}</h2>
+            <h2 className="text-2xl font-bold mb-6">Pedidos: {mesa ? mesa.nombre : mesaId}</h2> {/* Mostrar el nombre de la mesa */}
             <ul className="mb-4">
                 <li className="flex justify-between font-bold">
                     <span className="w-1/3">Producto</span>

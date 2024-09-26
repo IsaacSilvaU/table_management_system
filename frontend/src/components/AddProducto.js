@@ -10,11 +10,18 @@ const AddProducto = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const params = new URLSearchParams({ nombre, precio: parseFloat(precio) });
-            await axios.post(`http://localhost:8000/productos/?${params.toString()}`);
+            const data = {
+                nombre: nombre,
+                precio: parseFloat(precio),
+            };
+            await axios.post('http://localhost:8000/productos/', data);
             alert('Producto agregado exitosamente');
+            // Opcional: limpiar los campos del formulario
+            setNombre('');
+            setPrecio('');
         } catch (error) {
             console.error('Error al agregar producto:', error);
+            alert('Hubo un error al agregar el producto. Por favor, intenta de nuevo.');
         }
     };
 

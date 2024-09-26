@@ -65,14 +65,16 @@ const ProductoList = () => {
         }
     
         try {
-            await axios.put(`http://localhost:8000/mesas/precio/${tipo}?nuevo_precio=${nuevoPrecio}`);
+            const data = {
+                nuevo_precio: nuevoPrecio
+            };
+            await axios.put(`http://localhost:8000/mesas/precio/${tipo}`, data);
             alert("Precio actualizado exitosamente");
         } catch (error) {
             console.error('Error updating precio:', error);
             alert("Hubo un error al actualizar el precio.");
         }
     };
-    
 
     return (
         <div className="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-md">

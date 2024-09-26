@@ -1,20 +1,28 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Importar useNavigate si deseas redirigir después
 import Button from './ui/Button';
 import Input from './ui/Input';
 
 const AddMesa = () => {
     const [nombre, setNombre] = useState('');
     const [tipo, setTipo] = useState(1); // Por defecto tipo Pool
+    const navigate = useNavigate(); // Si deseas redirigir después de agregar la mesa
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const params = new URLSearchParams({ nombre, tipo: parseInt(tipo) });
-            await axios.post(`http://localhost:8000/mesas/?${params.toString()}`);
+            const data = {
+                nombre: nombre,
+                tipo: parseInt(tipo)
+            };
+            await axios.post('http://localhost:8000/mesas/', data);
             alert('Mesa agregada exitosamente');
+            // Opcional: redirigir a la lista de mesas
+            navigate('/mesas');
         } catch (error) {
             console.error('Error al agregar mesa:', error);
+            alert('Ocurrió un error al agregar la mesa. Por favor, intenta de nuevo.');
         }
     };
 
