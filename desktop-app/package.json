@@ -1,0 +1,42 @@
+{
+  "name": "sistema_de_gestion_de_mesas",
+  "version": "1.0.0",
+  "description": "Aplicacion para la gestion de mesas.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "package": "electron-builder"
+  },
+  "author": "Isaac N. Silva U.",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^25.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.tuempresa.sistema_de_gestion_de_mesas",
+    "productName": "Sistema de Gestion de Mesas",
+    "directories": {
+      "buildResources": "build"
+    },
+    "files": [
+      "**/*",
+      "../frontend/build/**/*",
+      "../dist/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist/",
+        "to": "dist",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "unicode": true
+    }
+  }
+}
